@@ -1,0 +1,882 @@
+openapi: 3.0.3
+info:
+  title: Quantum Marketplace Exchange API
+  description: |
+    RESTful API for the Quantum Marketplace Exchange platform.
+
+    ## Authentication
+    Most endpoints require authentication using JWT Bearer tokens.
+    Include the token in the Authorization header: `Bearer <token>`
+
+    ## Rate Limiting
+    - General endpoints: 100 requests per 15 minutes
+    - Auth endpoints: 5 requests per 15 minutes
+    - Sensitive endpoints: 10 requests per hour
+
+    ## Error Responses
+    All error responses follow this format:
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "ERROR_CODE",
+        "message": "Human readable error message"
+      }
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api@quantum-marketplace.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3001/api
+    description: Development server
+  - url: https://api.quantum-marketplace.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Users
+    description: User profile management
+  - name: Products
+    description: Product listing and management
+  - name: Orders
+    description: Order processing and tracking
+  - name: Reviews
+    description: Product reviews and ratings
+  - name: Messages
+    description: Real-time messaging system
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        bio:
+          type: string
+        isVerified:
+          type: boolean
+        rating:
+          type: number
+          format: float
+        reviewCount:
+          type: integer
+        memberSince:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sellerId:
+          type: string
+          format: uuid
+        seller:
+          $ref: '#/components/schemas/User'
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        subcategory:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        price:
+          type: number
+          format: float
+        currency:
+          type: string
+        condition:
+          type: string
+          enum: [new, like-new, good, fair, poor]
+        quantity:
+          type: integer
+        status:
+          type: string
+          enum: [active, sold, inactive, pending]
+        shipping:
+          $ref: '#/components/schemas/ShippingInfo'
+        tags:
+          type: array
+          items:
+            type: string
+        views:
+          type: integer
+        favorites:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ShippingInfo:
+      type: object
+      properties:
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShippingMethod'
+        freeShippingThreshold:
+          type: number
+          format: float
+
+    ShippingMethod:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+          format: float
+        estimatedDays:
+          type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        buyerId:
+          type: string
+          format: uuid
+        sellerId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        subtotal:
+          type: number
+          format: float
+        shipping:
+          type: number
+          format: float
+        tax:
+          type: number
+          format: float
+        total:
+          type: number
+          format: float
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, processing, shipped, delivered, cancelled, refunded]
+        paymentMethod:
+          type: string
+        paymentStatus:
+          type: string
+          enum: [pending, processing, completed, failed, refunded]
+        trackingNumber:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderItem:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        product:
+          $ref: '#/components/schemas/Product'
+        quantity:
+          type: integer
+        price:
+          type: number
+          format: float
+        variant:
+          type: string
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        reviewerId:
+          type: string
+          format: uuid
+        reviewer:
+          $ref: '#/components/schemas/User'
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        comment:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        isVerifiedPurchase:
+          type: boolean
+        helpfulCount:
+          type: integer
+        sellerResponse:
+          type: object
+          properties:
+            message:
+              type: string
+            respondedAt:
+              type: string
+              format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        sender:
+          $ref: '#/components/schemas/User'
+        content:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        lastMessage:
+          $ref: '#/components/schemas/Message'
+        unreadCount:
+          type: integer
+        productId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - username
+                - password
+                - firstName
+                - lastName
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                password:
+                  type: string
+                  minLength: 8
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Users
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                bio:
+                  type: string
+                avatar:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List products with filters
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: condition
+          in: query
+          schema:
+            type: string
+            enum: [new, like-new, good, fair, poor]
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [recent, price-asc, price-desc, popular, rating]
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Product'
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      totalPages:
+                        type: integer
+
+    post:
+      tags:
+        - Products
+      summary: Create a new product listing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - category
+                - price
+                - condition
+                - quantity
+                - shipping
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                subcategory:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                price:
+                  type: number
+                condition:
+                  type: string
+                  enum: [new, like-new, good, fair, poor]
+                quantity:
+                  type: integer
+                shipping:
+                  $ref: '#/components/schemas/ShippingInfo'
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+
+    put:
+      tags:
+        - Products
+      summary: Update product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '200':
+          description: Product updated successfully
+
+    delete:
+      tags:
+        - Products
+      summary: Delete product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product deleted successfully
+
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: Get user's orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+
+    post:
+      tags:
+        - Orders
+      summary: Create a new order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+                - shippingAddress
+                - paymentMethod
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: integer
+                      variant:
+                        type: string
+                shippingAddress:
+                  type: object
+                paymentMethod:
+                  type: string
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /reviews:
+    post:
+      tags:
+        - Reviews
+      summary: Create a product review
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - rating
+                - title
+                - comment
+              properties:
+                productId:
+                  type: string
+                  format: uuid
+                orderId:
+                  type: string
+                  format: uuid
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                title:
+                  type: string
+                comment:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Review'
+
+  /messages/conversations:
+    get:
+      tags:
+        - Messages
+      summary: Get user's conversations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+
+  /messages:
+    post:
+      tags:
+        - Messages
+      summary: Send a message
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - receiverId
+                - content
+              properties:
+                receiverId:
+                  type: string
+                  format: uuid
+                conversationId:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Message'
